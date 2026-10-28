@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="de-CH">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blitzlesen - Sichtwortschatz Trainer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#0369a1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Lexend', sans-serif;
+            user-select: none;
+        }
+        
+        .syllable-1 { color: #2563eb; } /* Blau */
+        .syllable-2 { color: #dc2626; } /* Rot */
+        .dark .syllable-1 { color: #60a5fa; }
+        .dark .syllable-2 { color: #f87171; }
+
+        /* Animationen */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 0.4; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .fixation-pulse {
+            animation: pulse-ring 1.2s infinite ease-in-out;
+        }
+
+        .shake {
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-200">
+
+    <!-- App Container -->
+    <div class="max-w-4xl mx-auto px-4 py-6 flex flex-col min-h-screen">
+        
+        <!-- Header / Navigation -->
+        <header class="flex justify-between items-center mb-6 bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-700">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="app.showDashboard()">
+                <div class="bg-gradient-to-tr from-amber-500 to-amber-400 text-white p-2.5 rounded-xl shadow-md shadow-amber-500/20">
+                    <i class="fa-solid fa-bolt text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-xl tracking-tight leading-none bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">Blitzlesen</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">Sichtwortschatz Trainer (Schweiz)</p>
+                </div>
+            </div>
+
+            <!-- Header Controls -->
+            <div class="flex items-center gap-2">
+                <div class="flex items-center bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 px-3 py-1.5 rounded-xl text-sm font-bold border border-amber-200/50 dark:border-amber-800/50">
+                    <i class="fa-solid fa-star text-amber-500 mr-1.5"></i>
+                    <span id="header-stars">0</span>
+                </div>
+                <button onclick="app.toggleDarkMode()" class="p-2.5 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                    <i id="dark-mode-icon" class="fa-solid fa-moon text-lg"></i>
+                </button>
+                <button onclick="app.showSettingsModal()" class="p-2.5 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                    <i class="fa-solid fa-gear text-lg"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-grow flex flex-col justify-center">
+
+            <!-- VIEW 1: DASHBOARD / LEVEL SELECTION -->
+            <div id="view-dashboard" class="space-y-6">
+                <!-- Info Banner -->
+                <div class="bg-gradient-to-r from-slate-800 to-indigo-900 rounded-2xl p-6 text-white shadow-lg shadow-indigo-950/20 relative overflow-hidden">
+                    <div class="relative z-10 max-w-2xl">
+                        <span class="inline-block px-3 py-1 bg-indigo-500/30 border border-indigo-400/30 rounded-full text-xs font-semibold backdrop-blur-md mb-2">Sichtwortschatz & Blickspanne • Primar & Oberstufe</span>
+                        <h2 class="text-2xl font-bold mb-2">Trainiere Lesetempo & Wortbilderkennung</h2>
+                        <p class="text-indigo-200 text-sm leading-relaxed">Automatisiertes Lesen von Grundwörtern bis zu komplexen Wörtern und Teilsätzen. Die App ist ein Übungsprototyp, kein standardisierter Lesetest.</p>
+                    </div>
+                    <i class="fa-solid fa-bolt-lightning absolute -right-6 -bottom-6 text-9xl text-white/5 pointer-events-none"></i>
+                </div>
+
+                <!-- Mode Selector Bar -->
+                <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-700">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Kontroll-Modus wählen:</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <button onclick="app.setControlMode('mc')" id="btn-mode-mc" class="mode-btn p-3 rounded-xl border-2 text-left flex items-center gap-3 transition">
+                            <div class="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300">
+                                <i class="fa-solid fa-list-check"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold text-sm">Multiple Choice (1-4)</div>
+                                <div class="text-xs text-slate-500 dark:text-slate-400">Aus 4 Wörtern wählen</div>
+                            </div>
+                        </button>
+                        <button onclick="app.setControlMode('speech')" id="btn-mode-speech" class="mode-btn p-3 rounded-xl border-2 text-left flex items-center gap-3 transition">
+                            <div class="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-300">
+                                <i class="fa-solid fa-microphone"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold text-sm">Spracheingabe</div>
+                                <div class="text-xs text-slate-500 dark:text-slate-400">Das Wort laut aussprechen</div>
+                            </div>
+                        </button>
+                        <button onclick="app.setControlMode('manual')" id="btn-mode-manual" class="mode-btn p-3 rounded-xl border-2 text-left flex items-center gap-3 transition">
+                            <div class="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-300">
+                                <i class="fa-solid fa-keyboard"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold text-sm">Tastatur / Selbst</div>
+                                <div class="text-xs text-slate-500 dark:text-slate-400">Eingeben oder Selbstkontrolle</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Training fortsetzen -->
+                <div id="resume-training-panel" class="hidden bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-2xl p-4 flex items-center justify-between gap-3">
+                    <div>
+                        <div class="font-bold text-emerald-900 dark:text-emerald-200">Training pausiert</div>
+                        <div class="text-sm text-emerald-800 dark:text-emerald-300">Du kannst genau dort weitermachen, wo du aufgehört hast.</div>
+                    </div>
+                    <button onclick="app.resumeTraining()" class="shrink-0 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm">Weiter machen</button>
+                </div>
+
+                <!-- Stages Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="stages-container">
+                    <!-- Dynamic rendering via JS -->
+                </div>
+            </div>
+
+            <!-- VIEW 2: GAME EXERCISE -->
+            <div id="view-game" class="hidden flex flex-col items-center justify-center space-y-6 my-auto py-4">
+                
+                <!-- Game Header Info -->
+                <div class="w-full max-w-xl flex items-center justify-between bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-700 shadow-sm">
+                    <button onclick="app.pauseTraining()" class="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white font-semibold text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-pause"></i> Pause
+                    </button>
+                    <div class="text-center">
+                        <div id="game-stage-title" class="font-bold text-sm text-slate-700 dark:text-slate-200">Stufe 1</div>
+                        <div id="game-speed-tag" class="text-xs text-amber-600 dark:text-amber-400 font-extrabold transition-all">1500 ms Tempo</div>
+                    </div>
+                    <div class="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-200">
+                        <i class="fa-solid fa-bullseye text-blue-500"></i>
+                        <span id="game-progress">1 / 20</span>
+                    </div>
+                </div>
+
+                <!-- MAIN FLASH CANVAS CARD -->
+                <div class="w-full max-w-xl bg-white dark:bg-slate-800 rounded-3xl border-2 border-slate-200 dark:border-slate-700 p-8 shadow-xl text-center relative min-h-[260px] flex flex-col items-center justify-center overflow-hidden">
+                    
+                    <!-- Fixation Cross State -->
+                    <div id="state-fixation" class="flex flex-col items-center justify-center space-y-2">
+                        <div class="w-12 h-12 rounded-full border-2 border-amber-500/40 flex items-center justify-center fixation-pulse">
+                            <i class="fa-solid fa-plus text-amber-500 text-2xl font-bold"></i>
+                        </div>
+                        <p class="text-xs text-slate-400 font-medium">Blicke auf das Kreuz...</p>
+                    </div>
+
+                    <!-- Flash Word State -->
+                    <div id="state-word" class="hidden my-auto w-full">
+                        <span id="flash-word-text" class="font-extrabold tracking-wide inline-block leading-tight select-none">
+                            <!-- Word rendered here -->
+                        </span>
+                    </div>
+
+                    <!-- Answer Interaction State -->
+                    <div id="state-answer" class="hidden w-full flex flex-col items-center">
+                        <p class="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-4">Welches Wort hast du gesehen?</p>
+                        
+                        <!-- MC Container -->
+                        <div id="control-mc-container" class="w-full grid grid-cols-2 gap-3">
+                            <!-- MC Options rendered here -->
+                        </div>
+
+                        <!-- Speech Container -->
+                        <div id="control-speech-container" class="w-full flex flex-col items-center gap-3">
+                            <button id="btn-speech-trigger" onclick="app.startSpeechRecognition()" class="w-20 h-20 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white text-2xl shadow-lg shadow-emerald-500/30 flex items-center justify-center transition active:scale-95">
+                                <i class="fa-solid fa-microphone"></i>
+                            </button>
+                            <p id="speech-status-text" class="text-xs text-slate-500 font-medium">Klicke aufs Mikrofon und sprich das Wort aus</p>
+                            
+                            <!-- Fallback buttons -->
+                            <div class="flex gap-2 mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/60 w-full justify-center">
+                                <span class="text-xs text-slate-400 self-center mr-2">Oder manuell:</span>
+                                <button onclick="app.verifySpeechFallback(true)" class="px-3 py-1.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 text-xs font-bold rounded-lg hover:bg-emerald-200">Richtig (R)</button>
+                                <button onclick="app.verifySpeechFallback(false)" class="px-3 py-1.5 bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 text-xs font-bold rounded-lg hover:bg-rose-200">Falsch (F)</button>
+                            </div>
+                        </div>
+
+                        <!-- Manual/Input Container -->
+                        <div id="control-manual-container" class="w-full flex flex-col items-center gap-3 max-w-sm">
+                            <div class="flex w-full gap-2">
+                                <input type="text" id="manual-word-input" autocomplete="off" placeholder="Wort eintippen..." class="flex-grow px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <button onclick="app.submitManualInput()" class="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700">Prüfen</button>
+                            </div>
+                            <div class="text-xs text-slate-400 flex items-center gap-2">
+                                <span>Oder:</span>
+                                <button onclick="app.revealAndSelfCheck()" class="underline hover:text-slate-600 dark:hover:text-slate-200">Wort aufdecken & selbst vergleichen</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Self-Check Overlay -->
+                    <div id="self-check-overlay" class="hidden w-full flex-col items-center space-y-3">
+                        <div class="text-xs text-slate-400">Das richtige Wort war:</div>
+                        <div id="revealed-word" class="text-2xl font-extrabold text-blue-600 dark:text-blue-400"></div>
+                        <div class="flex gap-3 pt-2">
+                            <button onclick="app.evaluateAnswer(true)" class="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-sm shadow-md shadow-emerald-500/20">Richtig (1)</button>
+                            <button onclick="app.evaluateAnswer(false)" class="px-5 py-2 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl text-sm shadow-md shadow-rose-500/20">Falsch (2)</button>
+                        </div>
+                    </div>
+
+                    <!-- Feedback Alert Message -->
+                    <div id="game-feedback" class="absolute bottom-3 left-0 right-0 text-center opacity-0 transition-opacity duration-200 pointer-events-none">
+                        <span id="feedback-badge" class="px-4 py-1.5 rounded-full text-xs font-bold inline-block shadow-md"></span>
+                    </div>
+                </div>
+
+                <!-- Start Next Round / Retry Button -->
+                <button id="btn-next-word" onclick="app.nextTurn()" class="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-500/25 flex items-center gap-2 text-base transition transform active:scale-95">
+                    <span>Nächstes Wort [Enter]</span> <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- VIEW 3: LEVEL COMPLETED MODAL / SUMMARY -->
+            <div id="view-result" class="hidden max-w-md mx-auto w-full bg-white dark:bg-slate-800 rounded-3xl p-8 border border-slate-200 dark:border-slate-700 shadow-2xl text-center space-y-6">
+                <div class="w-20 h-20 bg-amber-100 dark:bg-amber-950/60 text-amber-500 rounded-full flex items-center justify-center mx-auto text-3xl shadow-inner">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+                <div>
+                    <h2 class="text-2xl font-extrabold">Übung Beendet!</h2>
+                    <p id="result-subtitle" class="text-sm text-slate-500 dark:text-slate-400 mt-1">Gutes Blitzlese-Training!</p>
+                </div>
+
+                <div class="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl grid grid-cols-2 gap-2 text-left text-sm border border-slate-100 dark:border-slate-800">
+                    <div class="text-slate-500">Erstversuch Richtig:</div>
+                    <div id="result-score" class="font-bold text-right text-emerald-600">9 / 10</div>
+                    <div class="text-slate-500">End-Geschwindigkeit:</div>
+                    <div id="result-speed" class="font-bold text-right text-blue-600">400 ms</div>
+                    <div class="text-slate-500">Trainingsdauer:</div>
+                    <div id="result-duration" class="font-bold text-right">1:15 Min</div>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <button onclick="app.continueReading()" id="btn-result-continue" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-play"></i> Weiterlesen (10 weitere Wörter)
+                    </button>
+                    <button onclick="app.showDashboard()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition">
+                        Zur Übersicht / Dashboard
+                    </button>
+                    <button onclick="app.restartCurrentLevel()" class="w-full py-2.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 font-semibold text-xs">
+                        Stufe nochmals von vorne starten
+                    </button>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="mt-8 text-center text-xs text-slate-400 dark:text-slate-500">
+            Blitzlesen Trainer (Schweiz - 'ss' Schreibweise) • Adaptives Tempo • Tastatur-Steuerung (1-4, Enter)
+        </footer>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-5">
+            <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-3">
+                <h3 class="font-bold text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-blue-500"></i> Einstellungen
+                </h3>
+                <button onclick="app.hideSettingsModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Syllable Highlight Toggle -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="font-semibold text-sm">Silben-Farbmarkierung</div>
+                        <div class="text-xs text-slate-400">Hebt Silben farblich ab</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="setting-syllables" class="sr-only peer" checked onchange="app.updateSettings()">
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <!-- Font Size Slider -->
+                <div>
+                    <div class="flex justify-between text-sm font-semibold mb-1">
+                        <span>Schriftgrösse Wortblitz</span>
+                        <span id="setting-fontsize-val" class="text-xs text-blue-500 font-bold">48px</span>
+                    </div>
+                    <input type="range" id="setting-fontsize" min="32" max="72" value="48" class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600" oninput="app.updateSettings()">
+                </div>
+
+                <!-- Fixation Delay Slider -->
+                <div>
+                    <div class="flex justify-between text-sm font-semibold mb-1">
+                        <span>Fixationsdauer (Vorbereitung)</span>
+                        <span id="setting-fixation-val" class="text-xs text-blue-500 font-bold">1000 ms</span>
+                    </div>
+                    <input type="range" id="setting-fixation" min="500" max="2000" step="100" value="1000" class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600" oninput="app.updateSettings()">
+                </div>
+            </div>
+
+            <button onclick="app.hideSettingsModal()" class="w-full py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 font-bold text-sm rounded-xl">
+                Schliessen
+            </button>
+        </div>
+    </div>
+
+    <!-- APPLICATION LOGIC JS -->
+    <script>
+        /**
+         * EXTENDED FREQUENCY WORD DATABASE (7 STAGES, 40+ ITEMS PER STAGE INCL. ERROR WORDS & CH-SPELLING)
+         */
+        const WORD_DATABASE = {
+            stage1: [
+                { word: "und", syllables: ["und"], distractors: ["uns", "um", "von"] },
+                { word: "ist", syllables: ["ist"], distractors: ["iss", "ost", "uns"] },
+                { word: "das", syllables: ["das"], distractors: ["dem", "des", "dass"] },
+                { word: "mit", syllables: ["mit"], distractors: ["mir", "mut"] },
+                { word: "auf", syllables: ["auf"], distractors: ["aus", "auch", "ruf"] },
+                { word: "für", syllables: ["für"], distractors: ["flur", "vor"] },
+                { word: "nur", syllables: ["nur"], distractors: ["nun", "pur"] },
+                { word: "wir", syllables: ["wir"], distractors: ["wie", "wer", "wirr"] },
+                { word: "ich", syllables: ["ich"], distractors: ["ist", "im", "ihn"] },
+                { word: "sie", syllables: ["sie"], distractors: ["sei", "sind", "sieb"] },
+                { word: "von", syllables: ["von"], distractors: ["vor", "vom", "voll"] },
+                { word: "aus", syllables: ["aus"], distractors: ["auf", "außen"] },
+                { word: "die", syllables: ["die"], distractors: ["der", "den", "dem"] },
+                { word: "der", syllables: ["der"], distractors: ["die", "den", "dem"] },
+                { word: "den", syllables: ["den"], distractors: ["der", "dem", "des"] },
+                { word: "dem", syllables: ["dem"], distractors: ["den", "der", "des"] },
+                { word: "sich", syllables: ["sich"], distractors: ["sind", "sie", "sicher"] },
+                { word: "des", syllables: ["des"], distractors: ["das", "dem", "den"] },
+                { word: "ein", syllables: ["ein"], distractors: ["eine", "eines", "einer"] },
+                { word: "auch", syllables: ["auch"], distractors: ["auf", "aus", "acht"] },
+                { word: "nach", syllables: ["nach"], distractors: ["noch", "nacht", "nah"] },
+                { word: "wie", syllables: ["wie"], distractors: ["wir", "wer", "wo"] },
+                { word: "im", syllables: ["im"], distractors: ["in", "ihm", "am"] },
+                { word: "um", syllables: ["um"], distractors: ["und", "uns", "am"] },
+                { word: "am", syllables: ["am"], distractors: ["an", "um", "im"] },
+                { word: "an", syllables: ["an"], distractors: ["am", "ab", "als"] },
+                { word: "als", syllables: ["als"], distractors: ["alt", "alle", "also"] },
+                { word: "vor", syllables: ["vor"], distractors: ["von", "voll", "viel"] },
+                { word: "bis", syllables: ["bis"], distractors: ["bin", "bei", "bus"] },
+                { word: "bei", syllables: ["bei"], distractors: ["bis", "bau", "bin"] },
+                { word: "mir", syllables: ["mir"], distractors: ["mit", "mich", "mehr"] },
+                { word: "dir", syllables: ["dir"], distractors: ["dich", "die", "der"] },
+                { word: "dich", syllables: ["dich"], distractors: ["dir", "doch", "dach"] },
+                { word: "mich", syllables: ["mich"], distractors: ["mir", "mit", "mehr"] },
+                { word: "ihr", syllables: ["ihr"], distractors: ["ihn", "ihm", "ist"] },
+                { word: "ihm", syllables: ["ihm"], distractors: ["ihn", "ihr", "im"] },
+                { word: "ihn", syllables: ["ihn"], distractors: ["ihm", "ihr", "in"] },
+                { word: "was", syllables: ["was"], distractors: ["wer", "wo", "wie"] },
+                { word: "wo", syllables: ["wo"], distractors: ["wer", "was", "wie"] },
+                { word: "dann", syllables: ["dann"], distractors: ["denn", "dank", "dass"] },
+                { word: "wahr", syllables: ["wahr"], distractors: ["war", "wahr", "waren"] }
+            ],
+            stage2: [
+                { word: "schon", syllables: ["schon"], distractors: ["schön", "schein", "schnell"] },
+                { word: "durch", syllables: ["durch"], distractors: ["durst", "doch", "dach"] },
+                { word: "mehr", syllables: ["mehr"], distractors: ["meer", "mehrere", "mein"] },
+                { word: "jetzt", syllables: ["jetzt"], distractors: ["jede", "jener", "jetziger"] },
+                { word: "ohne", syllables: ["oh", "ne"], distractors: ["oben", "oder", "ofen"] },
+                { word: "sehr", syllables: ["sehr"], distractors: ["sehe", "sind", "sein"] },
+                { word: "alle", syllables: ["al", "le"], distractors: ["alles", "allem", "allen"] },
+                { word: "diese", syllables: ["die", "se"], distractors: ["dieser", "diesem", "diesen"] },
+                { word: "immer", syllables: ["im", "mer"], distractors: ["immer", "immerhin", "immerfort"] },
+                { word: "wieder", syllables: ["wie", "der"], distractors: ["wieder", "wider", "wiegen"] },
+                { word: "hier", syllables: ["hier"], distractors: ["hier", "hin", "hierhin"] },
+                { word: "dort", syllables: ["dort"], distractors: ["dort", "dorf", "dorn"] },
+                { word: "heute", syllables: ["heu", "te"], distractors: ["heute", "häute", "heuer"] },
+                { word: "morgen", syllables: ["mor", "gen"], distractors: ["morgen", "morgenrot", "morgig"] },
+                { word: "gestern", syllables: ["ge", "stern"], distractors: ["gestern", "gestein", "gestatt"] },
+                { word: "können", syllables: ["kön", "nen"], distractors: ["können", "kennen", "könnte"] },
+                { word: "müssen", syllables: ["müs", "sen"], distractors: ["müssen", "messen", "müsste"] },
+                { word: "sollen", syllables: ["sol", "len"], distractors: ["sollen", "sohlen", "sollte"] },
+                { word: "wollen", syllables: ["wol", "len"], distractors: ["wollen", "wolle", "wollte"] },
+                { word: "werden", syllables: ["wer", "den"], distractors: ["werden", "werfen", "werte"] },
+                { word: "haben", syllables: ["ha", "ben"], distractors: ["haben", "hafen", "habenicht"] },
+                { word: "sein", syllables: ["sein"], distractors: ["sein", "seine", "seiner"] },
+                { word: "sind", syllables: ["sind"], distractors: ["sind", "sindh", "singen"] },
+                { word: "war", syllables: ["war"], distractors: ["wahr", "waren", "warn"] },
+                { word: "hatte", syllables: ["hat", "te"], distractors: ["hatten", "hätte", "halte"] },
+                { word: "gab", syllables: ["gab"], distractors: ["gibt", "gabe", "gar"] },
+                { word: "wenn", syllables: ["wenn"], distractors: ["wem", "wen", "wenig"] },
+                { word: "aber", syllables: ["a", "ber"], distractors: ["ader", "aber", "alle"] },
+                { word: "oder", syllables: ["o", "der"], distractors: ["oder", "ofen", "ohne"] },
+                { word: "doch", syllables: ["doch"], distractors: ["dach", "durch", "dich"] },
+                { word: "weil", syllables: ["weil"], distractors: ["weit", "wein", "welch"] },
+                { word: "dass", syllables: ["dass"], distractors: ["das", "dem", "des"] },
+                { word: "noch", syllables: ["noch"], distractors: ["nach", "nicht", "nur"] },
+                { word: "ganz", syllables: ["ganz"], distractors: ["ganz", "gans", "gar"] },
+                { word: "gut", syllables: ["gut"], distractors: ["gut", "glut", "guss"] },
+                { word: "viel", syllables: ["viel"], distractors: ["viel", "vier", "voll"] },
+                { word: "allein", syllables: ["al", "lein"], distractors: ["allein", "allzu", "also"] },
+                { word: "genügend", syllables: ["ge", "nü", "gend"], distractors: ["genügend", "genau", "gewohnt"] },
+                { word: "gelb", syllables: ["gelb"], distractors: ["gelb", "grob", "gilt"] },
+                { word: "bald", syllables: ["bald"], distractors: ["bald", "band", "bild"] }
+            ],
+            stage3: [
+                { word: "Zeit", syllables: ["Zeit"], distractors: ["Zaun", "Zeug", "Ziel"] },
+                { word: "Jahr", syllables: ["Jahr"], distractors: ["Jahre", "Jagd", "Januar"] },
+                { word: "Mensch", syllables: ["Mensch"], distractors: ["Menge", "Meldung", "Mond"] },
+                { word: "Tag", syllables: ["Tag"], distractors: ["Tage", "Takt", "Tal"] },
+                { word: "Mann", syllables: ["Mann"], distractors: ["Männer", "Mond", "Maus"] },
+                { word: "Frau", syllables: ["Frau"], distractors: ["Frauen", "Freund", "Frage"] },
+                { word: "Kind", syllables: ["Kind"], distractors: ["Kinder", "Kinn", "Kranz"] },
+                { word: "Haus", syllables: ["Haus"], distractors: ["Haut", "Hut", "Halle"] },
+                { word: "Stadt", syllables: ["Stadt"], distractors: ["Staat", "Statt", "Stand"] },
+                { word: "Land", syllables: ["Land"], distractors: ["Lamm", "Last", "Lied"] },
+                { word: "Weg", syllables: ["Weg"], distractors: ["Welt", "Welle", "Werk"] },
+                { word: "Hand", syllables: ["Hand"], distractors: ["Hund", "Hut", "Haft"] },
+                { word: "Auge", syllables: ["Au", "ge"], distractors: ["Auto", "Auer", "Axt"] },
+                { word: "Kopf", syllables: ["Kopf"], distractors: ["Knopf", "Korb", "Kran"] },
+                { word: "Leben", syllables: ["Le", "ben"], distractors: ["Leber", "Lesen", "Leine"] },
+                { word: "Grund", syllables: ["Grund"], distractors: ["Grast", "Gunst", "Gras"] },
+                { word: "Wort", syllables: ["Wort"], distractors: ["Wert", "Wirt", "Woche"] },
+                { word: "Geld", syllables: ["Geld"], distractors: ["Gelb", "Gelt", "Gold"] },
+                { word: "Wasser", syllables: ["Was", "ser"], distractors: ["Waffel", "Wanderer", "Warm"] },
+                { word: "Mutter", syllables: ["Mut", "ter"], distractors: ["Muster", "Mutter", "Musterung"] },
+                { word: "Vater", syllables: ["Va", "ter"], distractors: ["Vater", "Vetter", "Vesper"] },
+                { word: "Seite", syllables: ["Sei", "te"], distractors: ["Seite", "Seide", "Seile"] },
+                { word: "Name", syllables: ["Na", "me"], distractors: ["Name", "Nase", "Narbe"] },
+                { word: "Herr", syllables: ["Herr"], distractors: ["Herr", "Herz", "Herd"] },
+                { word: "Platz", syllables: ["Platz"], distractors: ["Platz", "Pilz", "Pelz"] },
+                { word: "Frage", syllables: ["Fra", "ge"], distractors: ["Frage", "Farbe", "Fahne"] },
+                { word: "Arbeit", syllables: ["Ar", "beit"], distractors: ["Arbeit", "Anteil", "Ablauf"] },
+                { word: "Fall", syllables: ["Fall"], distractors: ["Fall", "Feld", "Fell"] },
+                { word: "Teil", syllables: ["Teil"], distractors: ["Teil", "Teer", "Teich"] },
+                { word: "Ende", syllables: ["En", "de"], distractors: ["Ende", "Erde", "Ente"] },
+                { word: "Kraft", syllables: ["Kraft"], distractors: ["Kraft", "Kraut", "Kranz"] },
+                { word: "Welt", syllables: ["Welt"], distractors: ["Welt", "Welle", "Westen"] },
+                { word: "Frieden", syllables: ["Frie", "den"], distractors: ["Frieden", "Flieder", "finden"] },
+                { word: "Fähigkeit", syllables: ["Fä", "hig", "keit"], distractors: ["Fähigkeit", "Fälligkeit", "Feuchtigkeit"] },
+                { word: "Galerie", syllables: ["Ga", "le", "rie"], distractors: ["Galerie", "Garantie", "Geometrie"] },
+                { word: "Gerät", syllables: ["Ge", "rät"], distractors: ["Gerät", "Gebet", "Gesetz"] },
+                { word: "Gesund", syllables: ["ge", "sund"], distractors: ["gesund", "genannt", "gespannt"] },
+                { word: "Lärm", syllables: ["Lärm"], distractors: ["Lärm", "Kern", "Turm"] },
+                { word: "Schiff", syllables: ["Schiff"], distractors: ["Schiff", "Schub", "Schlaf"] },
+                { word: "Teller", syllables: ["Tel", "ler"], distractors: ["Teller", "Keller", "Treffer"] }
+            ],
+            stage4: [
+                { word: "Schule", syllables: ["Schu", "le"], distractors: ["Schuhe", "Schale", "Schule"] },
+                { word: "Katze", syllables: ["Kat", "ze"], distractors: ["Kerze", "Kiste", "Kratze"] },
+                { word: "Fenster", syllables: ["Fen", "ster"], distractors: ["Finstern", "Finster", "Fenster"] },
+                { word: "Blume", syllables: ["Blu", "me"], distractors: ["Bluse", "Blase", "Bäume"] },
+                { word: "Fussball", syllables: ["Fuss", "ball"], distractors: ["Fussball", "Fussgänger"] },
+                { word: "Schlüssel", syllables: ["Schlüs", "sel"], distractors: ["Schlüssel", "Schlösser", "Schluss"] },
+                { word: "Strasse", syllables: ["Stras", "se"], distractors: ["Strasse", "Strauch", "Strauss"] },
+                { word: "Sonne", syllables: ["Son", "ne"], distractors: ["Sonne", "Sommer", "Sondern"] },
+                { word: "Sommer", syllables: ["Som", "mer"], distractors: ["Sommer", "Sonne"] },
+                { word: "Winter", syllables: ["Win", "ter"], distractors: ["Winter", "Winzer"] },
+                { word: "Wetter", syllables: ["Wet", "ter"], distractors: ["Wetter", "Wester"] },
+                { word: "gross", syllables: ["gross"], distractors: ["gross", "grau", "grob"] },
+                { word: "weiss", syllables: ["weiss"], distractors: ["weiss", "weit", "weich"] },
+                { word: "heiss", syllables: ["heiss"], distractors: ["heiss", "heiter"] },
+                { word: "draussen", syllables: ["drau", "ssen"], distractors: ["draussen", "drunter", "drinnen"] },
+                { word: "fliessen", syllables: ["flies", "sen"], distractors: ["fliessen", "fliegen"] },
+                { word: "schliessen", syllables: ["schlies", "sen"], distractors: ["schliessen", "schlafen"] },
+                { word: "lassen", syllables: ["las", "sen"], distractors: ["lassen", "lasten"] },
+                { word: "müssen", syllables: ["müs", "sen"], distractors: ["müssen", "messen"] },
+                { word: "wissen", syllables: ["wis", "sen"], distractors: ["wissen", "weisen"] },
+                { word: "dass", syllables: ["dass"], distractors: ["dass", "das", "dem"] },
+                { word: "Tasse", syllables: ["Tas", "se"], distractors: ["Tasse", "Taste"] },
+                { word: "Klasse", syllables: ["Klas", "se"], distractors: ["Klasse", "Kasse"] },
+                { word: "Kissen", syllables: ["Kis", "sen"], distractors: ["Kissen", "Kiste"] },
+                { word: "Schloss", syllables: ["Schloss"], distractors: ["Schloss", "Schluss"] },
+                { word: "Fluss", syllables: ["Fluss"], distractors: ["Fluss", "Floss"] },
+                { word: "Grüsse", syllables: ["Grüs", "se"], distractors: ["Grüsse", "Grösse"] },
+                { word: "Füsse", syllables: ["Füs", "se"], distractors: ["Füsse", "Fässer"] },
+                { word: "süss", syllables: ["süss"], distractors: ["süss", "satt"] },
+                { word: "Stress", syllables: ["Stress"], distractors: ["Stress", "Streit"] },
+                { word: "Riss", syllables: ["Riss"], distractors: ["Riss", "Rost"] },
+                { word: "Pass", syllables: ["Pass"], distractors: ["Pass", "Pfad"] },
+                { word: "Essen", syllables: ["Es", "sen"], distractors: ["Essen", "Eule"] },
+                { word: "fressen", syllables: ["fres", "sen"], distractors: ["fressen", "frieren"] },
+                { word: "vergessen", syllables: ["ver", "ges", "sen"], distractors: ["vergessen", "vergeben"] },
+                { word: "Karussell", syllables: ["Ka", "rus", "sell"], distractors: ["Karussell", "Karusell", "Kassette"] },
+                { word: "Katastrophe", syllables: ["Ka", "tas", "tro", "phe"], distractors: ["Katastrophe", "Katastropfe", "Kategorie"] },
+                { word: "Gewissen", syllables: ["Ge", "wis", "sen"], distractors: ["Gewissen", "Gewissenhaft", "Gewitter"] },
+                { word: "Hilfe", syllables: ["Hil", "fe"], distractors: ["Hilfe", "Hülle", "Hälfte"] },
+                { word: "Fassade", syllables: ["Fas", "sa", "de"], distractors: ["Fassade", "Fassade", "Fasan"] }
+            ],
+            stage5: [
+                { word: "im Wald", syllables: ["im", "Wald"], distractors: ["im Wald", "im Feld"] },
+                { word: "sehr schnell", syllables: ["sehr", "schnell"], distractors: ["sehr schön", "sehr schnell"] },
+                { word: "auf dem Tisch", syllables: ["auf", "dem", "Tisch"], distractors: ["auf dem Tisch", "unter dem Tisch"] },
+                { word: "vor dem Haus", syllables: ["vor", "dem", "Haus"], distractors: ["vor dem Haus", "hinter dem Haus"] },
+                { word: "in der Schule", syllables: ["in", "der", "Schu", "le"], distractors: ["in der Schule", "an der Schule"] },
+                { word: "mit dem Hund", syllables: ["mit", "dem", "Hund"], distractors: ["mit dem Hund", "ohne den Hund"] },
+                { word: "nach Hause", syllables: ["nach", "Hau", "se"], distractors: ["nach Hause", "von Zuhause"] },
+                { word: "unter dem Dach", syllables: ["un", "ter", "dem", "Dach"], distractors: ["unter dem Dach", "auf dem Dach"] },
+                { word: "neben dem Weg", syllables: ["ne", "ben", "dem", "Weg"], distractors: ["neben dem Weg", "auf dem Weg"] },
+                { word: "durch die Tür", syllables: ["durch", "die", "Tür"], distractors: ["durch die Tür", "vor die Tür"] },
+                { word: "für uns alle", syllables: ["für", "uns", "al", "le"], distractors: ["für uns alle", "mit uns allen"] },
+                { word: "vor langer Zeit", syllables: ["vor", "lan", "ger", "Zeit"], distractors: ["vor langer Zeit", "seit langer Zeit"] },
+                { word: "an diesem Tag", syllables: ["an", "die", "sem", "Tag"], distractors: ["an diesem Tag", "in diesem Jahr"] },
+                { word: "von Tag zu Tag", syllables: ["von", "Tag", "zu", "Tag"], distractors: ["von Tag zu Tag", "von Jahr zu Jahr"] },
+                { word: "aus diesem Grund", syllables: ["aus", "die", "sem", "Grund"], distractors: ["aus diesem Grund", "aus gutem Grund"] },
+                { word: "mit ganzer Kraft", syllables: ["mit", "gan", "zer", "Kraft"], distractors: ["mit ganzer Kraft", "mit aller Macht"] },
+                { word: "auf jeden Fall", syllables: ["auf", "je", "den", "Fall"], distractors: ["auf jeden Fall", "in jedem Fall"] },
+                { word: "in dieser Zeit", syllables: ["in", "die", "ser", "Zeit"], distractors: ["in dieser Zeit", "vor dieser Zeit"] },
+                { word: "über dem Meer", syllables: ["ü", "ber", "dem", "Meer"], distractors: ["über dem Meer", "unter dem Meer"] },
+                { word: "durch das Tor", syllables: ["durch", "das", "Tor"], distractors: ["durch das Tor", "vor das Tor"] },
+                { word: "für ein Jahr", syllables: ["für", "ein", "Jahr"], distractors: ["für ein Jahr", "vor einem Jahr"] },
+                { word: "ohne zu sagen", syllables: ["oh", "ne", "zu", "sa", "gen"], distractors: ["ohne zu sagen", "ohne zu fragen"] },
+                { word: "vor dem Tor", syllables: ["vor", "dem", "Tor"], distractors: ["vor dem Tor", "durch das Tor"] },
+                { word: "in dem Raum", syllables: ["in", "dem", "Raum"], distractors: ["in dem Raum", "aus dem Raum"] },
+                { word: "mit viel Geld", syllables: ["mit", "viel", "Geld"], distractors: ["mit viel Geld", "ohne viel Geld"] },
+                { word: "nach einer Stunde", syllables: ["nach", "ei", "ner", "Stun", "de"], distractors: ["nach einer Stunde", "in einer Stunde"] },
+                { word: "unter dem Baum", syllables: ["un", "ter", "dem", "Baum"], distractors: ["unter dem Baum", "auf dem Baum"] },
+                { word: "neben dem Haus", syllables: ["ne", "ben", "dem", "Haus"], distractors: ["neben dem Haus", "vor dem Haus"] },
+                { word: "durch den Park", syllables: ["durch", "den", "Park"], distractors: ["durch den Park", "in dem Park"] },
+                { word: "für das Kind", syllables: ["für", "das", "Kind"], distractors: ["für das Kind", "mit dem Kind"] },
+                { word: "vor vielen Jahren", syllables: ["vor", "vie", "len", "Jah", "ren"], distractors: ["vor vielen Jahren", "seit vielen Jahren"] },
+                { word: "in die Stadt", syllables: ["in", "die", "Stadt"], distractors: ["in die Stadt", "aus der Stadt"] },
+                { word: "mit dem Bus", syllables: ["mit", "dem", "Bus"], distractors: ["mit dem Bus", "in dem Bus"] },
+                { word: "nach dem Essen", syllables: ["nach", "dem", "Es", "sen"], distractors: ["nach dem Essen", "vor dem Essen"] },
+                { word: "zu Hause", syllables: ["zu", "Hau", "se"], distractors: ["zu Hause", "nach Hause", "im Hause"] },
+                { word: "im Allgemeinen", syllables: ["im", "All", "ge", "mei", "nen"], distractors: ["im Allgemeinen", "im Besonderen"] },
+                { word: "fast immer", syllables: ["fast", "im", "mer"], distractors: ["fast immer", "fast nie", "fast alles"] },
+                { word: "im Voraus", syllables: ["im", "Vro", "aus"], distractors: ["im Voraus", "im Nachhinein"] },
+                { word: "heute Morgen", syllables: ["heu", "te", "Mor", "gen"], distractors: ["heute Morgen", "gestern Abend"] },
+                { word: "zum einen", syllables: ["zum", "ei", "nen"], distractors: ["zum einen", "zum anderen"] }
+            ],
+            stage6: [
+                { word: "aggressiv", syllables: ["ag", "gres", "siv"], distractors: ["aggressiv", "agresiv", "aggressif"] },
+                { word: "Chauffeur", syllables: ["Chauf", "feur"], distractors: ["Chauffeur", "Schoför", "Chauför"] },
+                { word: "Dilemma", syllables: ["Di", "lem", "ma"], distractors: ["Dilemma", "Dilema", "Dilemna"] },
+                { word: "Disziplin", syllables: ["Dis", "zi", "plin"], distractors: ["Disziplin", "Disziplien", "Tiziplin"] },
+                { word: "existenziell", syllables: ["ex", "is", "ten", "zi", "ell"], distractors: ["existenziell", "existenziell", "existenziell"] },
+                { word: "Rhythmus", syllables: ["Rhyth", "mus"], distractors: ["Rhythmus", "Rhitmus", "Rhythmus"] },
+                { word: "Ressourcen", syllables: ["Res", "sour", "cen"], distractors: ["Ressourcen", "Resourcen", "Ressursen"] },
+                { word: "Toleranz", syllables: ["To", "le", "ranz"], distractors: ["Toleranz", "Dolerranz", "Tolerranz"] },
+                { word: "Transformation", syllables: ["Trans", "for", "ma", "ti", "on"], distractors: ["Transformation", "Transplantation"] },
+                { word: "Hypothese", syllables: ["Hy", "po", "the", "se"], distractors: ["Hypothese", "Hypothek"] },
+                { word: "Demokratie", syllables: ["De", "mo", "kra", "tie"], distractors: ["Demokratie", "Diplomatie"] },
+                { word: "Differenzierung", syllables: ["Dif", "fe", "ren", "zie", "rung"], distractors: ["Differenzierung", "Definierung"] },
+                { word: "Interpretation", syllables: ["In", "ter", "pre", "ta", "ti", "on"], distractors: ["Interpretation", "Interaktion"] },
+                { word: "Konzentration", syllables: ["Kon", "zen", "tra", "ti", "on"], distractors: ["Konzentration", "Konstruktion"] },
+                { word: "Komplexität", syllables: ["Kom", "ple", "xi", "tät"], distractors: ["Komplexität", "Kapazität"] },
+                { word: "Effizienz", syllables: ["Ef", "fi", "zi", "enz"], distractors: ["Effizienz", "Effektivität"] },
+                { word: "Infrastruktur", syllables: ["In", "fra", "struk", "tur"], distractors: ["Infrastruktur", "Instruktion"] },
+                { word: "Globalisierung", syllables: ["Glo", "ba", "li", "sie", "rung"], distractors: ["Globalisierung", "Stabilisierung"] },
+                { word: "Nachhaltigkeit", syllables: ["Nach", "hal", "tig", "keit"], distractors: ["Nachhaltigkeit", "Nachlässigkeit"] },
+                { word: "Kommunikation", syllables: ["Kom", "mu", "ni", "ka", "ti", "on"], distractors: ["Kommunikation", "Kombination"] },
+                { word: "Digitalisierung", syllables: ["Di", "gi", "ta", "li", "sie", "rung"], distractors: ["Digitalisierung", "Diagnostizierung"] },
+                { word: "Individuum", syllables: ["In", "di", "vi", "du", "um"], distractors: ["Individuum", "Indikation"] },
+                { word: "Integration", syllables: ["In", "te", "gra", "ti", "on"], distractors: ["Integration", "Interaktion"] },
+                { word: "Evaluation", syllables: ["E", "va", "lu", "a", "ti", "on"], distractors: ["Evaluation", "Evolution"] },
+                { word: "Analyse", syllables: ["A", "na", "ly", "se"], distractors: ["Analyse", "Anatomie"] },
+                { word: "Synthese", syllables: ["Syn", "the", "se"], distractors: ["Synthese", "Symbiose"] },
+                { word: "Reflexion", syllables: ["Re", "fle", "xi", "on"], distractors: ["Reflexion", "Reduktion"] },
+                { word: "Innovation", syllables: ["In", "no", "va", "ti", "on"], distractors: ["Innovation", "Invasion"] },
+                { word: "Technologie", syllables: ["Tech", "no", "lo", "gie"], distractors: ["Technologie", "Terminologie"] },
+                { word: "Phänomen", syllables: ["Phä", "no", "men"], distractors: ["Phänomen", "Phantom"] },
+                { word: "Argumentation", syllables: ["Ar", "gu", "men", "ta", "ti", "on"], distractors: ["Argumentation", "Aktivierung"] },
+                { word: "Dokumentation", syllables: ["Do", "ku", "men", "ta", "ti", "on"], distractors: ["Dokumentation", "Demonstration"] },
+                { word: "Qualifikation", syllables: ["Qua", "li", "fi", "ka", "ti", "on"], distractors: ["Qualifikation", "Quantifizierung"] },
+                { word: "Manipulation", syllables: ["Ma", "ni", "pu", "la", "ti", "on"], distractors: ["Manipulation", "Manifestation"] },
+                { word: "Symmetrie", syllables: ["Sym", "me", "trie"], distractors: ["Symmetrie", "Sympathie"] },
+                { word: "Dimension", syllables: ["Di", "men", "si", "on"], distractors: ["Dimension", "Diskussion"] },
+                { word: "Perspektive", syllables: ["Per", "spek", "ti", "ve"], distractors: ["Perspektive", "Perzeption"] },
+                { word: "Kompetenz", syllables: ["Kom", "pe", "tenz"], distractors: ["Kompetenz", "Konsequenz"] },
+                { word: "Pluralismus", syllables: ["Plu", "ra", "lis", "mus"], distractors: ["Pluralismus", "Pragmatismus"] },
+                { word: "Professionell", syllables: ["Pro", "fes", "si", "o", "nell"], distractors: ["Professionell", "Ofiziell"] }
+            ],
+            stage7: [
+                { word: "in Anbetracht der Lage", syllables: ["in", "An", "be", "tracht", "der", "La", "ge"], distractors: ["in Anbetracht der Lage", "nach Einschätzung der Lage"] },
+                { word: "unter der Voraussetzung", syllables: ["un", "ter", "der", "Vo", "raus", "set", "zung"], distractors: ["unter der Voraussetzung", "trotz der Voraussetzung"] },
+                { word: "aus diesem Grund", syllables: ["aus", "die", "sem", "Grund"], distractors: ["aus diesem Grund", "aus welchem Grund"] },
+                { word: "im Laufe der Zeit", syllables: ["im", "Lau", "fe", "der", "Zeit"], distractors: ["im Laufe der Zeit", "am Ende der Zeit"] },
+                { word: "aufgrund der Ergebnisse", syllables: ["auf", "grund", "der", "Er", "geb", "nis", "se"], distractors: ["aufgrund der Ergebnisse", "trotz der Ergebnisse"] },
+                { word: "im Vergleich dazu", syllables: ["im", "Ver", "gleich", "da", "zu"], distractors: ["im Vergleich dazu", "im Unterschied dazu"] },
+                { word: "mit Blick auf die Zukunft", syllables: ["mit", "Blick", "auf", "die", "Zu", "kunft"], distractors: ["mit Blick auf die Zukunft", "mit Blick auf die Vergangenheit"] },
+                { word: "unter Berücksichtigung aller Faktoren", syllables: ["un", "ter", "Be", "rück", "sich", "ti", "gung", "al", "ler", "Fak", "to", "ren"], distractors: ["unter Berücksichtigung aller Faktoren", "ohne Berücksichtigung"] },
+                { word: "im Zusammenhang damit", syllables: ["im", "Zu", "sam", "men", "hang", "da", "mit"], distractors: ["im Zusammenhang damit", "im Gegensatz dazu"] },
+                { word: "auf der anderen Seite", syllables: ["auf", "der", "an", "de", "ren", "Sei", "te"], distractors: ["auf der anderen Seite", "auf der gleichen Seite"] },
+                { word: "nach neuesten Erkenntnissen", syllables: ["nach", "neu", "es", "ten", "Er", "kennt", "nis", "sen"], distractors: ["nach neuesten Erkenntnissen", "nach alten Erkenntnissen"] },
+                { word: "in erster Linie", syllables: ["in", "ers", "ter", "Li", "nie"], distractors: ["in erster Linie", "in zweiter Linie"] },
+                { word: "zum aktuellen Zeitpunkt", syllables: ["zum", "ak", "tu", "el", "len", "Zeit", "punkt"], distractors: ["zum aktuellen Zeitpunkt", "zu einem früheren Zeitpunkt"] },
+                { word: "vor diesem Hintergrund", syllables: ["vor", "die", "sem", "Hin", "ter", "grund"], distractors: ["vor diesem Hintergrund", "aus diesem Grund"] },
+                { word: "aus Sicht der Wissenschaft", syllables: ["aus", "Sicht", "der", "Wis", "sen", "schaft"], distractors: ["aus Sicht der Wissenschaft", "nach Meinung der Experten"] },
+                { word: "im Rahmen der Möglichkeiten", syllables: ["im", "Rah", "men", "der", "Mög", "lich", "kei", "ten"], distractors: ["im Rahmen der Möglichkeiten", "ohne jede Möglichkeit"] },
+                { word: "ohne Rücksicht auf Verluste", syllables: ["oh", "ne", "Rück", "sicht", "auf", "Ver", "lus", "te"], distractors: ["ohne Rücksicht auf Verluste", "mit Rücksicht auf die Natur"] },
+                { word: "in enger Zusammenarbeit", syllables: ["in", "en", "ger", "Zu", "sam", "men", "ar", "beit"], distractors: ["in enger Zusammenarbeit", "ohne direkte Zusammenarbeit"] },
+                { word: "mit besonderem Augenmerk", syllables: ["mit", "be", "son", "de", "rem", "Au", "gen", "merk"], distractors: ["mit besonderem Augenmerk", "ohne Beachtung"] },
+                { word: "unter diesen Umständen", syllables: ["un", "ter", "die", "sen", "Um", "stän", "den"], distractors: ["unter diesen Umständen", "trotz aller Umstände"] },
+                { word: "in absehbarer Zeit", syllables: ["in", "ab", "seh", "ba", "rer", "Zeit"], distractors: ["in absehbarer Zeit", "vor langer Zeit"] },
+                { word: "nach reichlicher Überlegung", syllables: ["nach", "reich", "li", "cher", "Ü", "ber", "le", "gung"], distractors: ["nach reichlicher Überlegung", "ohne lange Überlegung"] },
+                { word: "aus heutiger Perspektive", syllables: ["aus", "heu", "ti", "ger", "Per", "spek", "ti", "ve"], distractors: ["aus heutiger Perspektive", "aus damaliger Sicht"] },
+                { word: "im Wesentlichen bedeutet das", syllables: ["im", "We", "sent", "li", "chen", "be", "deu", "tet", "das"], distractors: ["im Wesentlichen bedeutet das", "zusammenfassend lässt sich sagen"] },
+                { word: "auf der Grundlage von Daten", syllables: ["auf", "der", "Grund", "la", "ge", "von", "Da", "ten"], distractors: ["auf der Grundlage von Daten", "ohne empirische Daten"] },
+                { word: "im Unterschied zu früher", syllables: ["im", "Un", "ter", "schied", "zu", "frü", "her"], distractors: ["im Unterschied zu früher", "genau wie früher"] },
+                { word: "mit sofortiger Wirkung", syllables: ["mit", "so", "for", "ti", "ger", "Wir", "kung"], distractors: ["mit sofortiger Wirkung", "ohne jede Wirkung"] },
+                { word: "unter Einhaltung der Regeln", syllables: ["un", "ter", "Ein", "hal", "tung", "der", "Re", "geln"], distractors: ["unter Einhaltung der Regeln", "trotz aller Regelungen"] },
+                { word: "in Hinblick auf die Folgen", syllables: ["in", "Hin", "blick", "auf", "die", "Fol", "gen"], distractors: ["in Hinblick auf die Folgen", "ohne Rücksicht"] },
+                { word: "aus eigener Erfahrung", syllables: ["aus", "ei", "ge", "ner", "Er", "fah", "rung"], distractors: ["aus eigener Erfahrung", "nach fremder Aussage"] },
+                { word: "im Zuge der Entwicklung", syllables: ["im", "Zu", "ge", "der", "Ent", "wick", "lung"], distractors: ["im Zuge der Entwicklung", "vor Beginn"] },
+                { word: "ohne Zweifel ist das", syllables: ["oh", "ne", "Zwei", "fel", "ist", "das"], distractors: ["ohne Zweifel ist das", "mit grosser Wahrscheinlichkeit"] },
+                { word: "in direkter Nachbarschaft", syllables: ["in", "di", "rek", "ter", "Nach", "bar", "schaft"], distractors: ["in direkter Nachbarschaft", "in weiter Entfernung"] },
+                { word: "mit Hilfe von Beispielen", syllables: ["mit", "Hil", "fe", "von", "Bei", "spie", "len"], distractors: ["mit Hilfe von Beispielen", "ohne konkrete Beispiele"] },
+                { word: "unter allen Umständen", syllables: ["un", "ter", "al", "len", "Um", "stän", "den"], distractors: ["unter allen Umständen", "nur im Notfall"] },
+                { word: "in Anlehnung an die Vorlage", syllables: ["in", "An", "leh", "nung", "an", "die", "Vor", "la", "ge"], distractors: ["in Anlehnung an die Vorlage", "ohne feste Vorlage"] },
+                { word: "aus diesem Blickwinkel", syllables: ["aus", "die", "sem", "Blick", "win", "kel"], distractors: ["aus diesem Blickwinkel", "aus anderer Perspektive"] },
+                { word: "im Bewusstsein der Verantwortung", syllables: ["im", "Be", "wusst", "sein", "der", "Ver", "ant", "wor", "tung"], distractors: ["im Bewusstsein der Verantwortung", "ohne jede Verantwortung"] },
+                { word: "mit Rücksicht auf die Natur", syllables: ["mit", "Rück", "sicht", "auf", "die", "Na", "tur"], distractors: ["mit Rücksicht auf die Natur", "mit Blick auf den Profit"] },
+                { word: "unter der Bedingung dass", syllables: ["un", "ter", "der", "Be", "din", "gung", "dass"], distractors: ["unter der Bedingung dass", "ohne jede Bedingung"] }
+            ]
+        };
+
+        const STAGE_CONFIGS = [
+            { id: 1, title: "Stufe 1: Top-Grundwörter", desc: "Die wichtigsten 1-silbigen Funktionswörter", dbKey: "stage1", icon: "fa-seedling", color: "emerald", level: "Primar" },
+            { id: 2, title: "Stufe 2: Pronomen & Hilfsverben", desc: "Häufige Bindewörter & Zeitwörter", dbKey: "stage2", icon: "fa-shapes", color: "blue", level: "Primar" },
+            { id: 3, title: "Stufe 3: Nomen & Hauptverben", desc: "Wichtige Gegenstands- & Tunwörter", dbKey: "stage3", icon: "fa-layer-group", color: "indigo", level: "Primar" },
+            { id: 4, title: "Stufe 4: Zweisilber & CH-Rechtschreibung", desc: "Wörter mit Schweizer 'ss' & Silbenstrukturen", dbKey: "stage4", icon: "fa-mountain", color: "amber", level: "Primar" },
+            { id: 5, title: "Stufe 5: Wortgruppen (Blickspanne 1)", desc: "2-3 Wörter auf einen Blick erfassen", dbKey: "stage5", icon: "fa-expand", color: "purple", level: "Primar/Sek I" },
+            { id: 6, title: "Stufe 6: Oberstufe & Fremdwörter", desc: "Fachbegriffe, Fehlerwörter & lange Wörter", dbKey: "stage6", icon: "fa-graduation-cap", color: "rose", level: "Oberstufe" },
+            { id: 7, title: "Stufe 7: Komplexe Satzglieder", desc: "Lange Wortverbindungen & Teilsätze", dbKey: "stage7", icon: "fa-brain", color: "violet", level: "Oberstufe" }
+        ];
+
+        /**
+         * MAIN APPLICATION CONTROLLER
+         */
+        class BlitzLesenApp {
+            constructor() {
+                this.controlMode = 'mc'; // 'mc', 'speech', 'manual'
+                this.settings = {
+                    showSyllables: true,
+                    fontSize: 48,
+                    fixationDelay: 1000
+                };
+                
+                this.userProgress = this.loadProgress();
+                this.currentStage = null;
+                this.currentSpeed = 1500;
+                this.startTime = null;
+                
+                this.currentQueue = [];
+                this.currentWordObj = null;
+                this.firstTrySuccessCount = 0;
+                this.firstAttemptCount = 0;
+                this.processedWordsCount = 0;
+                this.seenWordsSet = new Set();
+                this.failedWordsSet = new Set();
+                this.consecutiveWrongCount = 0;
+                this.answerLocked = false;
+
+                this.mcCurrentOptions = [];
+                this.isAwaitingTurnNext = false;
+                this.isPaused = false;
+                this.pausedPhase = null;
+                
+                this.flashTimer = null;
+                this.fixationTimer = null;
+                this.recognition = null;
+                this.isSpeechActive = false;
+
+                this.initSpeechRecognition();
+                this.initKeyboardListeners();
+            }
+
+            init() {
+                this.renderDashboard();
+                this.updateHeaderStars();
+                this.setControlMode(this.controlMode);
+            }
+
+            loadProgress() {
+                const saved = localStorage.getItem('blitzlesen_progress_v2');
+                if (saved) {
+                    try {
+                        const data = JSON.parse(saved);
+                        if (!data.modeSpeeds) data.modeSpeeds = { mc: {}, speech: {}, manual: {} };
+                                return data;
+                    } catch (e) {}
+                }
+            }
+
+            saveProgress() {
+                try {
+                    localStorage.setItem('blitzlesen_progress_v2', JSON.stringify(this.userProgress));
+                } catch (e) {
+                    console.warn('Fortschritt konnte nicht gespeichert werden:', e);
+                }
+                this.updateHeaderStars();
+            }
+
+            updateHeaderStars() {
+                document.getElementById('header-stars').innerText = this.userProgress.stars || 0;
+            }
+
+            toggleDarkMode() {
+                document.documentElement.classList.toggle('dark');
+                const isDark = document.documentElement.classList.contains('dark');
+                document.getElementById('dark-mode-icon').className = isDark ? 'fa-solid fa-sun text-lg' : 'fa-solid fa-moon text-lg';
+            }
+
+            setControlMode(mode) {
+                this.controlMode = mode;
+                ['mc', 'speech', 'manual'].forEach(m => {
+                    const btn = document.getElementById(`btn-mode-${m}`);
+                    if (!btn) return;
+                    if (m === mode) {
+                        btn.className = "mode-btn p-3 rounded-xl border-2 border-blue-500 bg-blue-50/50 dark:bg-blue-950/40 text-left flex items-center gap-3 transition shadow-sm";
+                    } else {
+                        btn.className = "mode-btn p-3 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-slate-300 text-left flex items-center gap-3 transition";
+                    }
+                });
+                this.renderDashboard();
+            }
+
+            initKeyboardListeners() {
+                window.addEventListener('keydown', (e) => {
+                    if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+                        if (e.key === 'Enter') {
+                            this.submitManualInput();
+                        }
+                        return;
+                    }
+
+                    const gameView = document.getElementById('view-game');
+                    if (gameView.classList.contains('hidden')) return;
+
+                    if (this.isAwaitingTurnNext) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            this.nextTurn();
+                        }
+                        return;
+                    }
+
+                    if (this.controlMode === 'mc' && !document.getElementById('state-answer').classList.contains('hidden')) {
+                        if (['1', '2', '3', '4'].includes(e.key)) {
+                            const idx = parseInt(e.key) - 1;
+                            if (this.mcCurrentOptions && this.mcCurrentOptions[idx]) {
+                                const selected = this.mcCurrentOptions[idx];
+                                this.evaluateAnswer(selected === this.currentWordObj.word);
+                            }
+                        }
+                    }
+
+                    if (this.controlMode === 'speech' && !document.getElementById('state-answer').classList.contains('hidden')) {
+                        if (e.key.toLowerCase() === 'r') this.verifySpeechFallback(true);
+                        if (e.key.toLowerCase() === 'f') this.verifySpeechFallback(false);
+                    }
+
+                    if (!document.getElementById('self-check-overlay').classList.contains('hidden')) {
+                        if (e.key === '1' || e.key.toLowerCase() === 'r') this.evaluateAnswer(true);
+                        if (e.key === '2' || e.key.toLowerCase() === 'f') this.evaluateAnswer(false);
+                    }
+                });
+            }
+
+            renderDashboard() {
+                const container = document.getElementById('stages-container');
+                if (!container) return;
+                container.innerHTML = '';
+
+                STAGE_CONFIGS.forEach(stage => {
+                    const card = document.createElement('div');
+                    card.className = "bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-700 shadow-sm flex flex-col justify-between space-y-4";
+                    
+                    const modeSpeeds = (this.userProgress.modeSpeeds && this.userProgress.modeSpeeds[this.controlMode]) 
+                        ? this.userProgress.modeSpeeds[this.controlMode] 
+                        : {};
+                    const savedSpeed = modeSpeeds[stage.id];
+
+                    const speedBadge = savedSpeed 
+                        ? `<div class="bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-extrabold text-xs px-2.5 py-1 rounded-lg border border-amber-300/40"><i class="fa-solid fa-gauge-high mr-1"></i> ${savedSpeed} ms</div>`
+                        : `<div class="text-xs text-slate-400 italic">Noch keine Zeit gespeichert</div>`;
+
+                    const startWithSavedBtn = savedSpeed
+                        ? `<button onclick="app.startLevel(${stage.id}, ${savedSpeed})" class="col-span-3 py-2 px-3 rounded-xl border-2 border-amber-400 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 font-bold text-xs text-amber-900 dark:text-amber-200 transition text-center flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-bolt text-amber-500"></i>
+                            Mit gespeichertem Tempo starten (${savedSpeed} ms)
+                           </button>`
+                        : '';
+
+                    const modeLabel = this.controlMode === 'mc' ? 'Multiple Choice' : (this.controlMode === 'speech' ? 'Spracheingabe' : 'Tastatur/Selbst');
+
+                    card.innerHTML = `
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-3">
+                                    <div class="p-2.5 rounded-xl bg-${stage.color}-100 dark:bg-${stage.color}-900/50 text-${stage.color}-600 dark:text-${stage.color}-300">
+                                        <i class="fa-solid ${stage.icon} text-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-base">${stage.title}</h3>
+                                        <p class="text-xs text-slate-400">${stage.desc}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/60">
+                                <span class="text-xs font-semibold text-slate-500">Tempo (${modeLabel}):</span>
+                                ${speedBadge}
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Startwert wählen:</label>
+                            ${startWithSavedBtn}
+                            <div class="grid grid-cols-3 gap-2">
+                                <button onclick="app.startLevel(${stage.id}, 1500)" class="py-2 px-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-950/30 font-bold text-xs text-slate-700 dark:text-slate-200 transition text-center">
+                                    1500 ms <span class="block text-[10px] font-normal text-slate-400">Start</span>
+                                </button>
+                                <button onclick="app.startLevel(${stage.id}, 800)" class="py-2 px-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-950/30 font-bold text-xs text-slate-700 dark:text-slate-200 transition text-center">
+                                    800 ms <span class="block text-[10px] font-normal text-slate-400">Zügig</span>
+                                </button>
+                                <button onclick="app.startLevel(${stage.id}, 200)" class="py-2 px-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-950/30 font-bold text-xs text-slate-700 dark:text-slate-200 transition text-center">
+                                    200 ms <span class="block text-[10px] font-normal text-slate-400">Profi</span>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+
+            startLevel(stageId, startSpeedMs) {
+                this.currentStage = STAGE_CONFIGS.find(s => s.id === stageId);
+                if (!this.currentStage) return;
+
+                this.currentSpeed = Math.min(10000, startSpeedMs);
+                this.startTime = Date.now();
+                this.isPaused = false;
+                this.pausedPhase = null;
+                document.getElementById('resume-training-panel').classList.add('hidden');
+                
+                const fullList = WORD_DATABASE[this.currentStage.dbKey];
+                const targetQueueSize = this.controlMode === 'manual' ? 10 : 20;
+                
+                this.currentQueue = [];
+                while (this.currentQueue.length < targetQueueSize) {
+                    const chunk = [...fullList].sort(() => 0.5 - Math.random());
+                    this.currentQueue.push(...chunk);
+                }
+                this.currentQueue = this.currentQueue.slice(0, targetQueueSize);
+
+                this.firstTrySuccessCount = 0;
+                this.firstAttemptCount = 0;
+                this.processedWordsCount = 0;
+                this.seenWordsSet = new Set();
+                this.failedWordsSet = new Set();
+                this.consecutiveWrongCount = 0;
+
+                document.getElementById('game-stage-title').innerText = `${this.currentStage.title}`;
+                this.updateSpeedTagUI();
+                
+                this.showView('game');
+                this.nextTurn();
+            }
+
+            updateSpeedTagUI() {
+                document.getElementById('game-speed-tag').innerText = `Anzeigedauer: ${Math.round(this.currentSpeed)} ms`;
+            }
+
+            nextTurn() {
+                this.isAwaitingTurnNext = false;
+                this.answerLocked = false;
+
+                const elapsedMs = Date.now() - (this.startTime || Date.now());
+                const isOverOneMinute = elapsedMs >= 60000;
+                const minTargetItems = this.controlMode === 'manual' ? 10 : 20;
+                const hasReachedMinItems = this.processedWordsCount >= minTargetItems;
+
+                if ((hasReachedMinItems || isOverOneMinute) && this.currentQueue.length === 0) {
+                    this.finishLevel();
+                    return;
+                }
+
+                if (this.currentQueue.length === 0) {
+                    const fullList = WORD_DATABASE[this.currentStage.dbKey];
+                    this.currentQueue = [...fullList].sort(() => 0.5 - Math.random()).slice(0, 10);
+                }
+
+                this.currentWordObj = this.currentQueue.shift();
+                const remaining = this.currentQueue.length + 1;
+                document.getElementById('game-progress').innerText = `Wort ${this.processedWordsCount + 1} (${remaining} im Stapel)`;
+                
+                document.getElementById('btn-next-word').classList.add('hidden');
+                document.getElementById('self-check-overlay').classList.add('hidden');
+                
+                this.hideFeedback();
+                this.setCanvasState('fixation');
+
+                this.fixationTimer = setTimeout(() => {
+                    this.flashWord();
+                }, this.settings.fixationDelay);
+            }
+
+            flashWord() {
+                this.setCanvasState('word');
+                const textElem = document.getElementById('flash-word-text');
+                textElem.style.fontSize = `${this.settings.fontSize}px`;
+
+                if (this.settings.showSyllables && this.currentWordObj.syllables && this.currentWordObj.syllables.length > 1) {
+                    if (this.currentWordObj.word.includes(' ')) {
+                        const words = this.currentWordObj.word.split(' ');
+                        let syllableIndex = 0;
+                        textElem.innerHTML = words.map(w => {
+                            const wordSyllables = [];
+                            let accumulated = '';
+                            while (syllableIndex < this.currentWordObj.syllables.length && accumulated.length < w.length) {
+                                const syl = this.currentWordObj.syllables[syllableIndex];
+                                wordSyllables.push({ text: syl, idx: syllableIndex });
+                                accumulated += syl;
+                                syllableIndex++;
+                            }
+                            return wordSyllables.map(s => `<span class="syllable-${(s.idx % 2) + 1}">${s.text}</span>`).join('');
+                        }).join(' ');
+                    } else {
+                        textElem.innerHTML = this.currentWordObj.syllables.map((s, i) => `<span class="syllable-${(i % 2) + 1}">${s}</span>`).join('');
+                    }
+                } else {
+                    textElem.innerText = this.currentWordObj.word;
+                }
+
+                this.flashTimer = setTimeout(() => {
+                    this.setCanvasState('answer');
+                    this.renderAnswerControls();
+                }, this.currentSpeed);
+            }
+
+            setCanvasState(state) {
+                document.getElementById('state-fixation').classList.add('hidden');
+                document.getElementById('state-word').classList.add('hidden');
+                document.getElementById('state-answer').classList.add('hidden');
+
+                if (state === 'fixation') document.getElementById('state-fixation').classList.remove('hidden');
+                if (state === 'word') document.getElementById('state-word').classList.remove('hidden');
+                if (state === 'answer') document.getElementById('state-answer').classList.remove('hidden');
+            }
+
+            renderAnswerControls() {
+                document.getElementById('control-mc-container').classList.add('hidden');
+                document.getElementById('control-speech-container').classList.add('hidden');
+                document.getElementById('control-manual-container').classList.add('hidden');
+
+                if (this.controlMode === 'mc') {
+                    const container = document.getElementById('control-mc-container');
+                    container.classList.remove('hidden');
+                    container.innerHTML = '';
+
+                    const target = this.currentWordObj.word;
+                    const allWords = WORD_DATABASE[this.currentStage.dbKey].map(item => item.word);
+                    const candidates = [...(this.currentWordObj.distractors || []), ...allWords.filter(word => word !== target)];
+                    const uniqueWrong = [...new Set(candidates.filter(word => word && word !== target))];
+                    const shuffledWrong = uniqueWrong.sort(() => Math.random() - 0.5).slice(0, 3);
+                    while (shuffledWrong.length < 3) shuffledWrong.push(`Option ${shuffledWrong.length + 1}`);
+                    let options = [target, ...shuffledWrong];
+                    options.sort(() => Math.random() - 0.5);
+                    this.mcCurrentOptions = options;
+
+                    options.forEach((opt, idx) => {
+                        const btn = document.createElement('button');
+                        btn.className = "p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:border-blue-400 font-bold text-base text-slate-700 dark:text-slate-200 transition text-center relative group";
+                        btn.innerHTML = `<span class="absolute left-2.5 top-2.5 text-xs bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300 w-5 h-5 rounded-md flex items-center justify-center font-bold">${idx + 1}</span> <span>${opt}</span>`;
+                        btn.onclick = () => this.evaluateAnswer(opt === this.currentWordObj.word);
+                        container.appendChild(btn);
+                    });
+
+                } else if (this.controlMode === 'speech') {
+                    document.getElementById('control-speech-container').classList.remove('hidden');
+                    document.getElementById('speech-status-text').innerText = "Klicke aufs Mikrofon und sprich das Wort laut";
+
+                } else if (this.controlMode === 'manual') {
+                    document.getElementById('control-manual-container').classList.remove('hidden');
+                    const input = document.getElementById('manual-word-input');
+                    input.value = '';
+                    input.focus();
+                }
+            }
+
+            evaluateAnswer(isCorrect, typedAnswer = null) {
+                if (this.answerLocked || !this.currentWordObj) return;
+                this.answerLocked = true;
+                this.processedWordsCount++;
+                const isFirstAttemptForWord = !this.seenWordsSet.has(this.currentWordObj.word);
+                if (isFirstAttemptForWord) {
+                    this.seenWordsSet.add(this.currentWordObj.word);
+                    this.firstAttemptCount++;
+                    if (isCorrect) this.firstTrySuccessCount++;
+                }
+                if (isCorrect) {
+                    this.consecutiveWrongCount = 0;
+                    this.currentSpeed = Math.min(10000, Math.round(this.currentSpeed * 0.90));
+                    this.showFeedback(`Richtig erkannt – 10 % schneller (${this.currentSpeed} ms).`, "bg-emerald-500 text-white");
+                } else {
+                    this.consecutiveWrongCount++;
+                    this.failedWordsSet.add(this.currentWordObj.word);
+                    const slowdownFactors = [1.10, 1.30, 1.60, 2.00];
+                    const factor = slowdownFactors[Math.min(this.consecutiveWrongCount, 4) - 1];
+                    this.currentSpeed = Math.min(10000, Math.round(this.currentSpeed * factor));
+                    const slowdownLabel = this.consecutiveWrongCount === 1 ? '10 % langsamer'
+                        : this.consecutiveWrongCount === 2 ? '30 % langsamer'
+                        : this.consecutiveWrongCount === 3 ? '60 % langsamer'
+                        : '100 % langsamer';
+                    const typedFeedback = this.controlMode === 'manual' && typedAnswer !== null
+                        ? ` Deine Eingabe: „${typedAnswer || '(leer)'}“. Richtig wäre: „${this.currentWordObj.word}“.`
+                        : '';
+                    this.showFeedback(`Falsch – ${this.consecutiveWrongCount}. Fehler in Folge: ${slowdownLabel}.${typedFeedback}`, "bg-rose-500 text-white");
+                    // Bei jedem Fehler zweimal wiederholen: an zweiter Stelle und nochmals am Stapelende.
+                    const repeatSoon = { ...this.currentWordObj };
+                    const repeatAtEnd = { ...this.currentWordObj };
+                    this.currentQueue.splice(Math.min(1, this.currentQueue.length), 0, repeatSoon);
+                    this.currentQueue.push(repeatAtEnd);
+                }
+                this.updateSpeedTagUI();
+                this.isAwaitingTurnNext = true;
+                document.getElementById('state-answer').classList.add('hidden');
+                document.getElementById('self-check-overlay').classList.add('hidden');
+                document.getElementById('btn-next-word').classList.remove('hidden');
+            }
+
+            showFeedback(text, bgClass) {
+                const fb = document.getElementById('game-feedback');
+                const badge = document.getElementById('feedback-badge');
+                badge.className = `px-4 py-1.5 rounded-full text-xs font-bold inline-block shadow-md ${bgClass}`;
+                badge.innerText = text;
+                fb.style.opacity = '1';
+            }
+
+            hideFeedback() {
+                document.getElementById('game-feedback').style.opacity = '0';
+            }
+
+            submitManualInput() {
+                if (!this.currentWordObj || this.answerLocked) return;
+                const normalize = value => value.normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('de-CH');
+                const rawInput = document.getElementById('manual-word-input').value;
+                const val = normalize(rawInput);
+                const target = normalize(this.currentWordObj.word);
+                this.evaluateAnswer(val === target, rawInput.trim());
+            }
+
+            revealAndSelfCheck() {
+                document.getElementById('state-answer').classList.add('hidden');
+                document.getElementById('self-check-overlay').classList.remove('hidden');
+                document.getElementById('revealed-word').innerText = this.currentWordObj.word;
+            }
+
+            verifySpeechFallback(isCorrect) {
+                this.evaluateAnswer(isCorrect);
+            }
+
+            initSpeechRecognition() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (SpeechRecognition) {
+                    this.recognition = new SpeechRecognition();
+                    this.recognition.lang = 'de-CH';
+                    this.recognition.interimResults = false;
+
+                    this.recognition.onstart = () => { this.isSpeechActive = true; };
+                    this.recognition.onend = () => { this.isSpeechActive = false; };
+
+                    this.recognition.onresult = (event) => {
+                        this.isSpeechActive = false;
+                        if (!this.currentWordObj || this.answerLocked) return;
+                        const transcript = event.results[0][0].transcript.normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('de-CH');
+                        const target = this.currentWordObj.word.normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('de-CH');
+                        document.getElementById('speech-status-text').innerText = `Erkannt: „${transcript}“. Die automatische Erkennung kann sich irren.`;
+                        setTimeout(() => this.evaluateAnswer(transcript === target), 500);
+                    };
+
+                    this.recognition.onerror = (event) => {
+                        this.isSpeechActive = false;
+                        if (event.error !== 'aborted') {
+                            document.getElementById('speech-status-text').innerText = "Sprache nicht erkannt. Nutze die Buttons unten.";
+                        }
+                    };
+                }
+            }
+
+            startSpeechRecognition() {
+                if (!this.recognition) return;
+                try {
+                    if (this.isSpeechActive) this.recognition.abort();
+                    this.recognition.start();
+                    document.getElementById('speech-status-text').innerText = "Höre zu... Sprich jetzt!";
+                } catch(e) {
+                    document.getElementById('speech-status-text').innerText = "Spracherkennung konnte nicht gestartet werden.";
+                }
+            }
+
+            finishLevel() {
+                const durationMs = Date.now() - (this.startTime || Date.now());
+                const durationSec = Math.floor(durationMs / 1000);
+                const mins = Math.floor(durationSec / 60);
+                const secs = durationSec % 60;
+                const durationFormatted = `${mins}:${secs < 10 ? '0' : ''}${secs} Min`;
+
+                if (!this.userProgress.modeSpeeds) this.userProgress.modeSpeeds = { mc: {}, speech: {}, manual: {} };
+                if (!this.userProgress.modeSpeeds[this.controlMode]) this.userProgress.modeSpeeds[this.controlMode] = {};
+                
+                this.userProgress.modeSpeeds[this.controlMode][this.currentStage.id] = this.currentSpeed;
+                const accuracy = this.firstAttemptCount ? Math.round((this.firstTrySuccessCount / this.firstAttemptCount) * 100) : 0;
+                this.userProgress.stars = (this.userProgress.stars || 0) + (this.firstTrySuccessCount >= 14 && accuracy >= 80 ? 1 : 0);
+                this.saveProgress();
+
+                document.getElementById('result-subtitle').innerText = durationSec >= 60 
+                    ? "1 Minute Trainingszeit erreicht! Möchtest du weiterlesen oder zur Übersicht?" 
+                    : "Mindestens 20 Wörter geschafft! Möchtest du weiterlesen oder zur Übersicht?";
+
+                document.getElementById('result-score').innerText = `${this.firstTrySuccessCount} / ${this.firstAttemptCount} Erstversuche`;
+                document.getElementById('result-speed').innerText = `${this.currentSpeed} ms Anzeigedauer`;
+                document.getElementById('result-score').innerText = `${this.firstTrySuccessCount} / ${this.firstAttemptCount} (${accuracy} %)`;
+                document.getElementById('result-duration').innerText = durationFormatted;
+
+                this.showView('result');
+            }
+
+            continueReading() {
+                const fullList = WORD_DATABASE[this.currentStage.dbKey];
+                const newBatch = [...fullList].sort(() => 0.5 - Math.random()).slice(0, 10);
+                this.currentQueue.push(...newBatch);
+
+                this.showView('game');
+                this.nextTurn();
+            }
+
+            pauseTraining() {
+                if (!this.currentStage || this.isPaused) return;
+                clearTimeout(this.flashTimer);
+                clearTimeout(this.fixationTimer);
+                if (this.recognition && this.isSpeechActive) {
+                    try { this.recognition.abort(); } catch (e) {}
+                }
+                const fixationVisible = !document.getElementById('state-fixation').classList.contains('hidden');
+                const wordVisible = !document.getElementById('state-word').classList.contains('hidden');
+                const answerVisible = !document.getElementById('state-answer').classList.contains('hidden');
+                this.pausedPhase = this.isAwaitingTurnNext ? 'next' : fixationVisible ? 'fixation' : wordVisible ? 'word' : answerVisible ? 'answer' : 'answer';
+                this.isPaused = true;
+                document.getElementById('resume-training-panel').classList.remove('hidden');
+                this.showView('dashboard');
+            }
+
+            resumeTraining() {
+                if (!this.isPaused || !this.currentStage) return;
+                this.isPaused = false;
+                document.getElementById('resume-training-panel').classList.add('hidden');
+                this.showView('game');
+                if (this.pausedPhase === 'fixation') {
+                    this.setCanvasState('fixation');
+                    this.fixationTimer = setTimeout(() => this.flashWord(), this.settings.fixationDelay);
+                } else if (this.pausedPhase === 'word') {
+                    // Das Wort wurde bereits gezeigt; nach der Pause folgt die Antwort.
+                    this.setCanvasState('answer');
+                    this.renderAnswerControls();
+                } else if (this.pausedPhase === 'answer') {
+                    this.setCanvasState('answer');
+                    this.renderAnswerControls();
+                } else if (this.pausedPhase === 'next') {
+                    document.getElementById('btn-next-word').classList.remove('hidden');
+                } else {
+                    this.nextTurn();
+                }
+                this.pausedPhase = null;
+            }
+
+            restartCurrentLevel() {
+                if (this.currentStage) {
+                    this.startLevel(this.currentStage.id, this.currentSpeed);
+                }
+            }
+
+            showView(viewName) {
+                document.getElementById('view-dashboard').classList.add('hidden');
+                document.getElementById('view-game').classList.add('hidden');
+                document.getElementById('view-result').classList.add('hidden');
+
+                if (viewName === 'dashboard') {
+                    this.renderDashboard();
+                    document.getElementById('view-dashboard').classList.remove('hidden');
+                } else if (viewName === 'game') {
+                    document.getElementById('view-game').classList.remove('hidden');
+                } else if (viewName === 'result') {
+                    document.getElementById('view-result').classList.remove('hidden');
+                }
+            }
+
+            showDashboard() {
+                clearTimeout(this.flashTimer);
+                clearTimeout(this.fixationTimer);
+                this.showView('dashboard');
+            }
+
+            showSettingsModal() {
+                document.getElementById('settings-modal').classList.remove('hidden');
+            }
+
+            hideSettingsModal() {
+                document.getElementById('settings-modal').classList.add('hidden');
+            }
+
+            updateSettings() {
+                this.settings.showSyllables = document.getElementById('setting-syllables').checked;
+                this.settings.fontSize = document.getElementById('setting-fontsize').value;
+                this.settings.fixationDelay = parseInt(document.getElementById('setting-fixation').value);
+
+                document.getElementById('setting-fontsize-val').innerText = `${this.settings.fontSize}px`;
+                document.getElementById('setting-fixation-val').innerText = `${this.settings.fixationDelay} ms`;
+            }
+        }
+
+        let app;
+        window.onload = () => {
+            app = new BlitzLesenApp();
+            app.init();
+        };
+    </script>
+</body>
+</html>
